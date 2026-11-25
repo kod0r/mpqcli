@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cctype>
 #include <string>
 #include <vector>
 
@@ -68,8 +69,38 @@ static int doGet(const char* path, const char* file, const char* out)
     return ok ? 0 : 2;
 }
 
+static bool ieq(const char* a, const char* b)
+{
+    for (; *a && *b; ++a, ++b)
+    {
+        int ca = std::tolower((unsigned char)*a), cb = std::tolower((unsigned char)*b);
+        if (ca != cb) return false;
+    }
+    return *a == *b;
+}
+
 static int doAdd(const char* path, const char* local, const char* archived)
 {
+    // StormLib rejects pseudo-names ("File########.ext") and internal names
+    // ("(listfile)", "(attributes)", "(signature)") with ERROR_INVALID_PARAMETER (22).
+    // Detect them up front so the user gets a clear reason, not a bare error code.
+    {
+        bool pseudo = (archived[0]=='F'||archived[0]=='f') && (archived[1]=='i'||archived[1]=='I') &&
+                      (archived[2]=='l'||archived[2]=='L') && (archived[3]=='e'||archived[3]=='E');
+        for (int i = 4; pseudo && i < 12; ++i)
+            if (archived[i] < '0' || archived[i] > '9') pseudo = false;
+        if (pseudo && archived[12] == '.')
+        {
+            std::fprintf(stderr, "add %s rejected: pseudo-name (File########.ext) not allowed; use a real asset path\n", archived);
+            return 2;
+        }
+        if (archived[0] == '(' &&
+            (ieq(archived, "(listfile)") || ieq(archived, "(attributes)") || ieq(archived, "(signature)")))
+        {
+            std::fprintf(stderr, "add %s rejected: internal MPQ name not allowed\n", archived);
+            return 2;
+        }
+    }
     HANDLE h = nullptr;
     if (!openArchive(path, h, false)) return 1;
     DWORD flags = MPQ_FILE_COMPRESS | MPQ_FILE_REPLACEEXISTING;
