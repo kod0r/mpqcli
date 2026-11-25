@@ -2,7 +2,7 @@
 
 A small command-line utility for inspecting and modifying MPQ (Mo'PaQ) archives used by World of Warcraft (and other Blizzard games).
 
-## Why do I exist
+## Why
 
 MPQ archives are the container format for WoW game data (DBC, M2 models, textures, etc.). The only robust library for reading/writing them is StormLib, which is a C/C++ library with no standalone CLI. Existing tools are either GUI-only (MPQEditor) or read-only (mpyq). When you need to script extraction or modification of MPQ contents in a headless/CI/container environment, there's no ready-made tool — so this wraps StormLib in a simple CLI.
 
